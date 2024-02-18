@@ -31,9 +31,10 @@ int main(void) {
     conn_counter++;
     do {
       // read data
-      bytes = BUFFER_MAX;
+      bytes = BUFFER_MAX - 1;
       result = tcp_receive(client, (void *)&data, &bytes);
       if ((result == TCP_NO_ERROR) && bytes) {
+        data[bytes] = 0;
         printf("Received : %s\n", data);
         bytes = strlen(data);
         bytes = bytes > BUFFER_MAX ? BUFFER_MAX : bytes;

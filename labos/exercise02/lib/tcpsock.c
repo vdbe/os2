@@ -122,7 +122,7 @@ int tcp_active_open(tcpsock_t **sock, int remote_port, char *remote_ip) {
                    errno, strerror(errno));
   TCP_ERR_HANDLER(result != 0, free(client); return TCP_SOCKOP_ERROR);
   p = inet_ntoa(addr.sin_addr); // returns addr to statically allocated buffer
-  client->ip_addr = (char *)malloc(sizeof(char) * CHAR_IP_ADDR_LENGTH);
+  client->ip_addr = (char *)malloc(sizeof(char) * (CHAR_IP_ADDR_LENGTH) + 1);
   TCP_ERR_HANDLER(client->ip_addr == NULL, free(client);
                   return TCP_MEMORY_ERROR);
   client->ip_addr = strncpy(client->ip_addr, p, CHAR_IP_ADDR_LENGTH);
@@ -185,7 +185,7 @@ int tcp_wait_for_connection(tcpsock_t *socket, tcpsock_t **new_socket) {
                    strerror(errno));
   TCP_ERR_HANDLER(s->sd == -1, free(s); return TCP_SOCKOP_ERROR);
   p = inet_ntoa(addr.sin_addr); // returns addr to statically allocated buffer
-  s->ip_addr = (char *)malloc(sizeof(char) * CHAR_IP_ADDR_LENGTH);
+  s->ip_addr = (char *)malloc(sizeof(char) * (CHAR_IP_ADDR_LENGTH) + 1);
   TCP_ERR_HANDLER(s->ip_addr == NULL, free(s); return TCP_MEMORY_ERROR);
   s->ip_addr = strncpy(s->ip_addr, p, CHAR_IP_ADDR_LENGTH);
   s->port = ntohs(addr.sin_port);

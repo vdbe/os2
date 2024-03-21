@@ -1,6 +1,4 @@
-/build/
-/compile_commands.json
-/.cache/
-/client_node
-/**/*.so
-/test_server
+build/
+compile_commands.json
+.cache
+log.txt

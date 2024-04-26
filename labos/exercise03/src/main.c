@@ -10,10 +10,13 @@
 #define INPUT_FILE "inputs.txt"
 
 
+
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
-	void *res;
+	int ret = -1;
+	void* retval = &ret;
+	void** retval2 = &retval;
 	char* input_file = INPUT_FILE;
 
 	pthread_t thread_id;
@@ -49,13 +52,16 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	if(pthread_join(thread_id, &res) != 0) {
+	if(pthread_join(thread_id, &retval) != 0) {
 		perror("pthread join");
 		exit(EXIT_FAILURE);
 	}
 
-
-	printf("Joined with thread %lx; returned value was %p\n", thread_id, res);
+	if(retval  == PTHREAD_CANCELED) {
+		fprintf(stderr, "thread canceled\n");
+	} else if (*(int*)retval){
+		fprintf(stderr, "thread exited with code %d\n", **(int**)retval2);
+	}
 
 	char data[MESSAGE_MAX];
 	char *plz = data;
@@ -65,8 +71,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	sbuffer_free(&worker_args.sbuffer);
-
-
 
   return EXIT_SUCCESS;
 }

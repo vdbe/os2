@@ -49,7 +49,7 @@ int sbuffer_remove(sbuffer_t * buffer, char * data) {
     sbuffer_node_t *dummy;
     if (buffer == NULL) return SBUFFER_FAILURE;
     if (buffer->head == NULL) return SBUFFER_NO_DATA;
-    strcpy(buffer->head->data, data);
+    strcpy(data, buffer->head->data);
     dummy = buffer->head;
     if (buffer->head == buffer->tail) // buffer has only one node
     {

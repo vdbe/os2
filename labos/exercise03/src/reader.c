@@ -7,7 +7,7 @@
 
 #include "worker.h"
 
-static char*test = "test123\0";
+static int reader_retval = EXIT_FAILURE;
 
 void* reader_worker(void *arg) {
 	worker_args_t* worker_args = (worker_args_t*)arg;
@@ -21,21 +21,22 @@ void* reader_worker(void *arg) {
 	char *line = NULL;
 	size_t len = 0;
 	ssize_t nread;
-	int ret = EXIT_FAILURE;
 
 	stream = fopen(input_file, "r");
 	if (stream == NULL) {
 		perror("Open INPUT_FILE");
-		pthread_exit(&ret);
+		pthread_exit(&reader_retval);
 	}
 
 	while ((nread = getline(&line, &len, stream)) != -1) {
 		fwrite(line, nread, 1, stdout);
-		//if (nread > MESSAGE_MAX) {
-		//	line[MESSAGE_MAX-1] = '\0';
-		//}
+		if (nread > MESSAGE_MAX) {
+			// Make sure the line ends with a null byte
+			line[MESSAGE_MAX-1] = '\0';
+		}
 
-		if(sbuffer_insert(sbuffer, test) != SBUFFER_SUCCESS) {
+		// TODO: Pass nread to not just copy MESSAGE_MAX every time
+		if(sbuffer_insert(sbuffer, line) != SBUFFER_SUCCESS) {
 			perror("sbuffer_insert");
 			goto reader_cleanup;
 		}
@@ -44,7 +45,8 @@ void* reader_worker(void *arg) {
 	if (errno != 0) {
 		perror("getline");
 	} else {
-		ret = EXIT_SUCCESS;
+		printf("SUCCESS\n");
+		reader_retval = EXIT_SUCCESS;
 	}
 
 	// Clean up
@@ -55,14 +57,5 @@ reader_cleanup:
 	fclose(stream);
 
 
-	char data[MESSAGE_MAX];
-
-	while ( sbuffer_remove(sbuffer, data) == SBUFFER_SUCCESS) {
-		printf("reader: %s\n", data);
-		printf("tail: %p, head %p\n", (void*)(sbuffer->tail), (void*)(sbuffer->head));
-	}
-
-	pthread_exit(&ret);
-
-	return NULL;
+	pthread_exit(&reader_retval);
 }

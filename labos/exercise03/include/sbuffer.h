@@ -34,14 +34,15 @@ int sbuffer_free(sbuffer_t ** buffer);
  * @param data a pointer to pre-allocated char* space (512 bytes), the data will be copied into this structure. No new memory is allocated for 'data' in this function.
  * @return SBUFFER_SUCCESS on success and SBUFFER_FAILURE if an error occurred
  */
-int sbuffer_remove(sbuffer_t * buffer, char * data);
+int sbuffer_remove(sbuffer_t * buffer, char ** data, size_t* data_len);
 
 /**
  * Inserts the data in 'data' at the end of 'buffer' (at the 'tail')
  * @param buffer a pointer to the buffer that is used
  * @param data a pointer to sbuffer_element_t data, that will be copied into the buffer
+ * @param n length of the data that will be copied
  * @return SBUFFER_SUCCESS on success and SBUFFER_FAILURE if an error occurred
 */
-int sbuffer_insert(sbuffer_t * buffer, char * data);
+int sbuffer_insert(sbuffer_t * buffer, char * data, size_t n);
 
 #endif  //_SBUFFER_H_

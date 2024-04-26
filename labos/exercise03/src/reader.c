@@ -29,17 +29,18 @@ void* reader_worker(void *arg) {
 	}
 
 	while ((nread = getline(&line, &len, stream)) != -1) {
+		fprintf(stderr, "%ld: ", nread);
 		fwrite(line, nread, 1, stdout);
-		if (nread > MESSAGE_MAX) {
-			// Make sure the line ends with a null byte
-			line[MESSAGE_MAX-1] = '\0';
-		}
 
-		// TODO: Pass nread to not just copy MESSAGE_MAX every time
-		if(sbuffer_insert(sbuffer, line) != SBUFFER_SUCCESS) {
+		// `line[nread-1]` is a '\0' or '\n'
+		// the '\0' is not counted in `nread` if it was not input
+		line[nread-1] = '\0';
+
+		if(sbuffer_insert(sbuffer, line, nread) != SBUFFER_SUCCESS) {
 			perror("sbuffer_insert");
 			goto reader_cleanup;
 		}
+		// TODO: pthread_cond_broadcast
 	}
 
 	if (errno != 0) {

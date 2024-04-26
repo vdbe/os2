@@ -63,11 +63,15 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "thread exited with code %d\n", **(int**)retval2);
 	}
 
-	char data[MESSAGE_MAX];
-	char *plz = data;
+	char *data = NULL;
+	size_t data_len = 0;;
 
-	while ( sbuffer_remove(worker_args.sbuffer, plz) == SBUFFER_SUCCESS) {
-		printf("main: %s\n", plz);
+	while ( sbuffer_remove(worker_args.sbuffer, &data, &data_len) == SBUFFER_SUCCESS) {
+		printf("main: %s\n", data);
+	}
+
+	if(data) {
+		free(data);
 	}
 
 	sbuffer_free(&worker_args.sbuffer);

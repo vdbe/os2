@@ -1,10 +1,12 @@
 #pragma once
 
-#include "sbuffer.h"
+#include "lllist.h"
 
-typedef struct {
-	sbuffer_t* sbuffer;
+typedef struct worker_args {
+  lllist_t list;
 
-	// Worker specific data
-	void* extra;
+  // Woker specific data
+  void *extra;
 } worker_args_t;
+
+int setup_pthread_attr(pthread_attr_t *);

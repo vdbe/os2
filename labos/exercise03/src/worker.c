@@ -10,11 +10,12 @@ inline int setup_pthread_attr(pthread_attr_t *attr) {
     return 1;
   }
 
-  if (pthread_attr_setstacksize(attr, PTHREAD_STACK_MIN) != 0) {
-    perror("pthread set stacksize");
-    pthread_attr_destroy(attr);
-    return 2;
-  }
+	// fprintf overflows stack with a `PTHREAD_STACK_MIN` of `16384`
+  // if (pthread_attr_setstacksize(attr, PTHREAD_STACK_MIN) != 0) {
+  //   perror("pthread set stacksize");
+  //   pthread_attr_destroy(attr);
+  //   return 2;
+  // }
 
   return 0;
 }

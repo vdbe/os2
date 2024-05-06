@@ -9,7 +9,7 @@ CFLAGS += -std=gnu11 -O2 -Wall -Wextra -Wpedantic -Werror
 # CFLAGS += -g -ggdb
 
 # Additional linker flags
-LDFLAGS += -Lm -lm -pthread
+LDFLAGS += -Lm -lm -pthread -lssl -lcrypto
 
 # Sanitizer
 # SANITIZERS += -fsanitize=address \

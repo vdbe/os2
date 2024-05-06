@@ -159,8 +159,8 @@ inline int lllist_node_add(struct lllist_head *head, char *data,
   return LLLIST_SUCCESS;
 }
 
-inline int lllist_node_consume(struct lllist_head *head, char **data,
-                               size_t *data_len) {
+inline int lllist_node_consume(struct lllist_head *head, char **data, 
+																size_t *data_len, size_t *data_buf_len) {
   struct node *node;
   node = (struct node *)head->first;
   int readers;
@@ -183,12 +183,12 @@ inline int lllist_node_consume(struct lllist_head *head, char **data,
   // Resize `data` to fit `node->data` if needed
   TSAN_ANNOTE_BENIGN_RACE_SIZED(&node->data_len, sizeof(node->data_len),
                                 "Race node->data_len");
-  if (*data_len < node->data_len) {
+  if (*data_buf_len < node->data_len) {
     char *tmp;
 
 #if LOG_LVL >= INFO
     fprintf(stderr, "INFO(lllist_node_consume): growing data from %ld to %ld\n",
-            *data_len, node->data_len);
+            *data_buf_len, node->data_len);
 #endif
 
     tmp = realloc(*data, node->data_len * sizeof(**data));
@@ -197,7 +197,7 @@ inline int lllist_node_consume(struct lllist_head *head, char **data,
     }
 
     *data = tmp;
-    *data_len = node->data_len;
+    *data_buf_len = node->data_len;
   }
 
   // NOTE: This is not a race condition since `node->node.next` is not `NULL`
@@ -208,6 +208,7 @@ inline int lllist_node_consume(struct lllist_head *head, char **data,
                                 "Race on *node->data");
   // TODO: Doesn't say it errors but maybe it returns `NULL`
   memcpy(*data, node->data, node->data_len);
+	*data_len = node->data_len;
 
   head->first = node->node.next;
 

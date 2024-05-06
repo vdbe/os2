@@ -14,12 +14,37 @@
 
 static int freq_count_ret_val = EXIT_FAILURE;
 
+static inline size_t process_data(
+	char* data,
+	size_t data_len,
+	size_t freq_count[]
+) {
+	size_t count = 0;
+
+	for (size_t ii = 0; ii < data_len -1; ii++) {
+		char c =  data[ii] | 0x20; //  0b00100000;
+
+		if (c < 'a' || c > 'z') {
+			continue;
+		}
+
+		freq_count[c - 'a'] += 1;
+		count += 1;
+	}
+
+	return count;
+}
+
 void *freq_count_worker(void *arg) {
   worker_args_t *worker_args;
   lllist_t list;
   char *data;
   size_t data_len;
+	size_t data_buf_len;
   bool has_data;
+
+	size_t total_count = 0;
+	size_t freq_count['z' - 'a' + 1];
 
   worker_args = (worker_args_t *)arg;
   list = worker_args->list;
@@ -30,17 +55,18 @@ void *freq_count_worker(void *arg) {
   (void)has_data;
 
   data = NULL;
-  data_len = 0;
+  data_buf_len = 0;
   has_data = true;
 
   while (has_data) {
-    switch (lllist_node_consume(&list, &data, &data_len)) {
+    switch (lllist_node_consume(&list, &data, &data_len, &data_buf_len)) {
     case LLLIST_SUCCESS:
 #if LOG_LVL >= INFO
       fprintf(stderr, "INFO(freq_count_worker): list->first: %p\n",
               (void *)list.first);
 #endif
-      fprintf(stdout, "freq_count: %s\n", data);
+
+      total_count += process_data(data, data_len, freq_count);
       break;
     case LLLIST_NO_DATA:
 #if LOG_LVL >= DEBUG
@@ -73,6 +99,10 @@ freq_count_cleanup:
   if (data) {
     free(data);
   }
+
+	for (size_t ii = 0; ii < 'z' - 'a' + 1; ii++) {
+		fprintf(stdout, "%c: %ld\n", (char)('a' + ii), freq_count[ii]);
+	}
 
 #if LOG_LVL >= INFO
   fprintf(stderr, "INFO(freq_count_worker): exit with code %d\n",

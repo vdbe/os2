@@ -21,4 +21,4 @@ void lllist_end(lllist_t *);
 int lllist_free(lllist_t *);
 
 int lllist_node_add(lllist_t *, char *, size_t);
-int lllist_node_consume(lllist_t *, char **, size_t *);
+int lllist_node_consume(lllist_t *, char **, size_t *, size_t *);

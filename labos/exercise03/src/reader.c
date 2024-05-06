@@ -27,7 +27,7 @@ void *reader_worker(void *arg) {
   stream = fopen(input_file, "r");
   if (stream == NULL) {
     perror("Open INPUT_FILE");
-    pthread_exit(&reader_ret_val);
+    goto reader_return;
   }
 
   while ((nread = getline(&line, &len, stream)) != -1) {
@@ -58,6 +58,7 @@ reader_cleanup:
   }
   fclose(stream);
 
+reader_return:
 #if LOG_LVL >= INFO
   fprintf(stderr, "INFO(reader_worker): list ended with node: %p\n",
           (void *)list.first);

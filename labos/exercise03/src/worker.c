@@ -1,6 +1,7 @@
 #include "worker.h"
 
 #include <pthread.h>
+#include <limits.h>
 #include <stdio.h>
 
 inline int setup_pthread_attr(pthread_attr_t *attr) {

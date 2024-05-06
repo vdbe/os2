@@ -13,6 +13,7 @@
 #include "reader.h"
 
 #define INPUT_FILE "inputs.txt"
+#define DIGEST_FILE "digests.txt"
 
 int main(int argc, char *argv[]) {
   (void)argc;
@@ -21,14 +22,14 @@ int main(int argc, char *argv[]) {
   int ret;
   int *pthread_ret_val;
   char *input_file;
+  char *digest_file;
+	lllist_t list;
 
   pthread_attr_t attr;
-  worker_args_t worker_args;
 
   ret = EXIT_FAILURE;
   input_file = INPUT_FILE;
-
-  worker_args = (worker_args_t){.extra = input_file};
+	digest_file = DIGEST_FILE;
 
   union {
     pthread_t index[3];
@@ -46,33 +47,39 @@ int main(int argc, char *argv[]) {
 #endif
 #endif
 
-  if (lllist_init(&(worker_args.list), 2) != LLLIST_SUCCESS) {
+  if (lllist_init(&(list), 2) != LLLIST_SUCCESS) {
     perror("lllist_init");
     goto main_return;
   }
-
-  worker_args.extra = input_file;
 
   if (setup_pthread_attr(&attr) != 0) {
     goto main_cleanup;
   }
 
   if (pthread_create(&threads.name.reader, &attr, &reader_worker,
-                     &worker_args) != 0) {
+                     &(worker_args_t){
+											 .list = list,
+											 .extra = input_file,
+											 }) != 0) {
     perror("pthread create");
     pthread_attr_destroy(&attr);
     goto main_cleanup;
   }
 
   if (pthread_create(&threads.name.digest, &attr, &digest_worker,
-                     &worker_args) != 0) {
+                     &(worker_args_t){
+											 .list = list,
+											 .extra = digest_file,
+										 }) != 0) {
     perror("pthread create");
     pthread_attr_destroy(&attr);
     goto main_cleanup;
   }
 
   if (pthread_create(&threads.name.count, &attr, &freq_count_worker,
-                     &worker_args) != 0) {
+                     &(worker_args_t){
+											 .list = list,
+										 }) != 0) {
     perror("pthread create");
     pthread_attr_destroy(&attr);
     goto main_cleanup;
@@ -138,7 +145,7 @@ main_cleanup:
     }
   }
 
-  lllist_free(&worker_args.list);
+  lllist_free(&list);
 
 main_return:
 #if LOG_LVL >= INFO

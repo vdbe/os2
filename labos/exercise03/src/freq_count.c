@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <math.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -13,6 +14,10 @@
 #include "worker.h"
 
 static int freq_count_ret_val = EXIT_FAILURE;
+
+// static inline int len_of_number_base10(size_t number) {
+// 	return floor(log10(number)) + 1;
+// }
 
 static inline size_t process_data(
 	char* data,
@@ -100,9 +105,14 @@ freq_count_cleanup:
     free(data);
   }
 
-	for (size_t ii = 0; ii < 'z' - 'a' + 1; ii++) {
-		fprintf(stdout, "%c: %ld\n", (char)('a' + ii), freq_count[ii]);
+	for (size_t ii = 0; ii < sizeof(freq_count) / sizeof(freq_count[0]); ii++) {
+		printf("%c\t", (char)('a' + ii)); 
 	}
+	printf("\n");
+	for (size_t ii = 0; ii < sizeof(freq_count) / sizeof(freq_count[0]); ii++) {
+		printf("%ld\t", freq_count[ii]); 
+	}
+	printf("\n");
 
 #if LOG_LVL >= INFO
   fprintf(stderr, "INFO(freq_count_worker): exit with code %d\n",

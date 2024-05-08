@@ -11,6 +11,9 @@ struct lllist_head {
   struct lllist_node *first;
   struct lllist_node **first_unfree;
   int readers;
+
+	pthread_cond_t *cond_new_node;
+	pthread_mutex_t *mutex_new_node;
 };
 
 typedef struct node node_t;

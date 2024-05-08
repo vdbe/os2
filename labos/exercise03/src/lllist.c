@@ -2,6 +2,7 @@
 
 #include <pthread.h>
 #include <stdatomic.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,6 +22,7 @@ struct lllist_node {
 
 struct node {
   struct lllist_node node;
+	bool arrived;
   atomic_int readers;
 
   size_t data_len;
@@ -33,12 +35,47 @@ inline int lllist_init(struct lllist_head *list, int readers) {
   if (list->first == NULL) {
     return LLLIST_FAILURE;
   }
+	fprintf(stderr, "%d\n", __LINE__);
 
   list->first_unfree = malloc(sizeof(list->first_unfree));
   if (list->first_unfree == NULL) {
     free(list->first);
     return LLLIST_FAILURE;
   }
+
+  list->mutex_new_node = malloc(sizeof(*list->mutex_new_node));
+  if (list->mutex_new_node == NULL) {
+    free(list->first);
+		free(list->first_unfree);
+    return LLLIST_FAILURE;
+  }
+
+	if(pthread_mutex_init(list->mutex_new_node, NULL) != 0) {
+		perror("phtread_mut_init");
+		free(list->first);
+		free(list->first_unfree);
+		free(list->mutex_new_node);
+		return LLLIST_FAILURE;
+	}
+
+  list->cond_new_node = malloc(sizeof(*list->cond_new_node));
+  if (list->cond_new_node == NULL) {
+		free(list->first);
+		free(list->first_unfree);
+		pthread_mutex_destroy(list->mutex_new_node);
+		free(list->mutex_new_node);
+		return LLLIST_FAILURE;
+  }
+
+	if(pthread_cond_init(list->cond_new_node, NULL) != 0) {
+		perror("phtread_cond_init");
+		free(list->first);
+		free(list->first_unfree);
+		pthread_mutex_destroy(list->mutex_new_node);
+		free(list->mutex_new_node);
+		free(list->cond_new_node);
+		return LLLIST_FAILURE;
+	}
 
   *list->first_unfree = list->first;
 
@@ -54,14 +91,33 @@ inline int lllist_init(struct lllist_head *list, int readers) {
 
 inline void lllist_end(struct lllist_head *head) {
   ((struct node *)head->first)->node.next = head->first;
+
+	if(pthread_cond_broadcast(head->cond_new_node) != 0) {
+		// TODO: No idea how to handle this error
+		perror("lllist_add pthread cond broadast new node");
+	}
 }
 
 inline void lllist_add(struct lllist_head *head, struct lllist_node *new) {
+	bool *arrived;
+
+	arrived = &((struct node*)head->first)->arrived;
+
   // Point `next` of old filled node to the new empty node
   head->first->next = new;
 
   // Point `next` to the new node
   head->first = new;
+
+	if(*arrived == true) {
+#if LOG_LVL >= INFO
+  fprintf(stderr, "=================INFO(lllist_add): broadcast new node\n");
+#endif
+		if(pthread_cond_broadcast(head->cond_new_node) != 0) {
+			// TODO: No idea how to handle this error
+			perror("lllist_add pthread cond broadast new node");
+		}
+	}
 }
 
 inline int lllist_free(struct lllist_head *list) {
@@ -74,7 +130,7 @@ inline int lllist_free(struct lllist_head *list) {
   fprintf(stderr, "INFO(lllist_end): list->first_unfree: %p\n", (void *)node);
 #endif
 
-  while (node->node.next != NULL) {
+  while (node->node.next == NULL) {
     node_next = (struct node *)node->node.next;
 
 #if LOG_LVL >= INFO
@@ -96,6 +152,20 @@ inline int lllist_free(struct lllist_head *list) {
           (void *)list->first_unfree);
 #endif
   free(list->first_unfree);
+
+	if (pthread_mutex_destroy(list->mutex_new_node) != 0) {
+		perror("mutex destroy");
+		return LLLIST_FAILURE;
+	}
+
+	free(list->mutex_new_node);
+
+	if (pthread_mutex_destroy(list->mutex_new_node) != 0) {
+		perror("cond destroy");
+		return LLLIST_FAILURE;
+	}
+
+	free(list->cond_new_node);
 
   return LLLIST_SUCCESS;
 }
@@ -165,14 +235,29 @@ inline int lllist_node_consume(struct lllist_head *head, char **data,
   node = (struct node *)head->first;
   int readers;
 
+  TSAN_ANNOTE_BENIGN_RACE_SIZED(&node->node.arrived, sizeof(node->node.arrived),
+                                "Race node->node.next");
+	node->arrived = true;
+
   // _Last_ write to `node` by `node_add` is change `node->node.next` from
   // `NULL` to the ptr of the next node.
   // If it's not NULL it's safe to _read_ without race conditions
   TSAN_ANNOTE_BENIGN_RACE_SIZED(&node->node.next, sizeof(node->node.next),
                                 "Race node->node.next");
-  if (node->node.next == NULL) {
-    return LLLIST_NO_DATA;
-  }
+  // if (node->node.next == NULL) {
+  //   return LLLIST_NO_DATA;
+  // }
+	while (node->node.next == NULL) {
+#if LOG_LVL >= INFO
+    fprintf(stderr, "===== INFO(lllist_node_consume): waiting for new node %p\n",
+            (void*)node);
+#endif
+		if(pthread_cond_wait(head->cond_new_node, head->mutex_new_node) != 0) {
+			// TODO: No idea how to handle this error
+			perror("lllist_add pthread cond wait new node");
+			return LLLIST_NO_DATA;
+		};
+	}
 
   // If `head->first`/`node` points to itself the reader has finished
   if (node->node.next == head->first) {

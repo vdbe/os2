@@ -135,14 +135,20 @@ inline void lllist_add(struct lllist_head *head, struct lllist_node *new) {
   // Point `next` to the new node
   head->first = new;
 
-	if(*arrived == true || true) {
+	if(pthread_mutex_trylock(head->mutex_new_node) != 0) {
+		if(*arrived == true) {
 #if LOG_LVL >= INFO
-  fprintf(stderr, "INFO(lllist_add): broadcast new node\n");
+		fprintf(stderr, "INFO(lllist_add): broadcast new node\n");
 #endif
-		if(pthread_cond_broadcast(head->cond_new_node) != 0) {
-			// TODO: No idea how to handle this error
-			perror("lllist_add pthread cond broadast new node");
+			if(pthread_cond_broadcast(head->cond_new_node) != 0) {
+				// TODO: No idea how to handle this error
+				perror("lllist_add pthread cond broadast new node");
+			}
 		}
+	} else {
+		if(pthread_mutex_unlock(head->mutex_new_node) != 0) {
+			perror("lllist add pthread mutex unlock");
+		};
 	}
 }
 
@@ -273,15 +279,16 @@ inline int lllist_node_consume(struct lllist_head *head, char **data,
   // if (node->node.next == NULL) {
   //   return LLLIST_NO_DATA;
   // }
+
+	if(pthread_mutex_lock(head->mutex_new_node) != 0) {
+		perror("pthread mutex lock");
+		return LLLIST_NO_DATA;
+	};
 	while (node->node.next == NULL) {
 #if LOG_LVL >= INFO
     fprintf(stderr, "===== INFO(lllist_node_consume): waiting for new node %p\n",
             (void*)node);
 #endif
-		if(pthread_mutex_lock(head->mutex_new_node) != 0) {
-			perror("pthread mutex lock");
-			return LLLIST_NO_DATA;
-		};
 
 		if(pthread_cond_wait(head->cond_new_node, head->mutex_new_node) != 0) {
 			// TODO: No idea how to handle this error
@@ -289,11 +296,11 @@ inline int lllist_node_consume(struct lllist_head *head, char **data,
 			pthread_mutex_unlock(head->mutex_new_node);
 			return LLLIST_NO_DATA;
 		};
-		if(pthread_mutex_unlock(head->mutex_new_node) != 0) {
-			perror("pthread mutex unlock");
-			return LLLIST_NO_DATA;
-		};
 	}
+	if(pthread_mutex_unlock(head->mutex_new_node) != 0) {
+		perror("lllist consume pthread mutex unlock");
+		return LLLIST_NO_DATA;
+	};
 
   // If `head->first`/`node` points to itself the reader has finished
   if (node->node.next == head->first) {

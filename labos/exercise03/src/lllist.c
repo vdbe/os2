@@ -30,36 +30,61 @@ struct node {
 };
 
 inline int lllist_init(struct lllist_head *list, int readers) {
+	pthread_mutexattr_t mutex_attr;
+
+
+  if (pthread_mutexattr_init(&mutex_attr) != 0) {
+    perror("pthread set stacksize");
+    return LLLIST_FAILURE;
+  }
+
+  if (pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_NORMAL) != 0) {
+  // if (pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_RECURSIVE) != 0) {
+    perror("pthread set set type");
+    return LLLIST_FAILURE;
+  }
+
   // Inital empty `node`
   list->first = calloc(1, sizeof(struct node));
   if (list->first == NULL) {
+		pthread_mutexattr_destroy(&mutex_attr);
     return LLLIST_FAILURE;
   }
-	fprintf(stderr, "%d\n", __LINE__);
 
   list->first_unfree = malloc(sizeof(list->first_unfree));
   if (list->first_unfree == NULL) {
+		pthread_mutexattr_destroy(&mutex_attr);
     free(list->first);
     return LLLIST_FAILURE;
   }
 
   list->mutex_new_node = malloc(sizeof(*list->mutex_new_node));
   if (list->mutex_new_node == NULL) {
+		pthread_mutexattr_destroy(&mutex_attr);
     free(list->first);
 		free(list->first_unfree);
     return LLLIST_FAILURE;
   }
 
-	if(pthread_mutex_init(list->mutex_new_node, NULL) != 0) {
+	if(pthread_mutex_init(list->mutex_new_node, &mutex_attr) != 0) {
 		perror("phtread_mut_init");
+		pthread_mutexattr_destroy(&mutex_attr);
 		free(list->first);
 		free(list->first_unfree);
 		free(list->mutex_new_node);
 		return LLLIST_FAILURE;
 	}
 
+	if(pthread_mutexattr_destroy(&mutex_attr) != 0) {
+		perror("pthread mutex attr destroy");
+		free(list->first);
+		free(list->first_unfree);
+		free(list->mutex_new_node);
+	}
+
   list->cond_new_node = malloc(sizeof(*list->cond_new_node));
   if (list->cond_new_node == NULL) {
+		pthread_mutexattr_destroy(&mutex_attr);
 		free(list->first);
 		free(list->first_unfree);
 		pthread_mutex_destroy(list->mutex_new_node);
@@ -76,6 +101,7 @@ inline int lllist_init(struct lllist_head *list, int readers) {
 		free(list->cond_new_node);
 		return LLLIST_FAILURE;
 	}
+
 
   *list->first_unfree = list->first;
 
@@ -109,9 +135,9 @@ inline void lllist_add(struct lllist_head *head, struct lllist_node *new) {
   // Point `next` to the new node
   head->first = new;
 
-	if(*arrived == true) {
+	if(*arrived == true || true) {
 #if LOG_LVL >= INFO
-  fprintf(stderr, "=================INFO(lllist_add): broadcast new node\n");
+  fprintf(stderr, "INFO(lllist_add): broadcast new node\n");
 #endif
 		if(pthread_cond_broadcast(head->cond_new_node) != 0) {
 			// TODO: No idea how to handle this error
@@ -252,9 +278,19 @@ inline int lllist_node_consume(struct lllist_head *head, char **data,
     fprintf(stderr, "===== INFO(lllist_node_consume): waiting for new node %p\n",
             (void*)node);
 #endif
+		if(pthread_mutex_lock(head->mutex_new_node) != 0) {
+			perror("pthread mutex lock");
+			return LLLIST_NO_DATA;
+		};
+
 		if(pthread_cond_wait(head->cond_new_node, head->mutex_new_node) != 0) {
 			// TODO: No idea how to handle this error
 			perror("lllist_add pthread cond wait new node");
+			pthread_mutex_unlock(head->mutex_new_node);
+			return LLLIST_NO_DATA;
+		};
+		if(pthread_mutex_unlock(head->mutex_new_node) != 0) {
+			perror("pthread mutex unlock");
 			return LLLIST_NO_DATA;
 		};
 	}

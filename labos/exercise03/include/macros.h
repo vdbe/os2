@@ -7,7 +7,9 @@
 #define ERROR 2
 #define FATAL 1
 
+#ifndef LOG_LVL
 #define LOG_LVL INFO
+#endif
 
 // #if defined(__has_feature)
 // #if __has_feature(thread_sanitizer)

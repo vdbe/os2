@@ -49,6 +49,8 @@ void *digest_worker(void *arg) {
 	FILE *fptr;
 	const char *digest_file;
 
+	SLEEP(100);
+
 	sha1_hex_buffer[SHA_DIGEST_LENGTH*2] = '\0';
 
   worker_args = (worker_args_t *)arg;

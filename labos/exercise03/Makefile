@@ -6,7 +6,7 @@ INCLUDE_DIR ?= include
 
 # Additional compiler flags
 CFLAGS += -std=gnu11 -O2 -Wall -Wextra -Wpedantic -Werror
-CFLAGS += -g -ggdb
+# CFLAGS += -g -ggdb
 
 # Additional linker flags
 LDFLAGS += -Lm -lm -pthread -lssl -lcrypto

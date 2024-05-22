@@ -51,6 +51,8 @@ void *freq_count_worker(void *arg) {
 	size_t total_count = 0;
 	size_t freq_count['z' - 'a' + 1];
 
+	SLEEP(100);
+
   worker_args = (worker_args_t *)arg;
   list = worker_args->list;
 

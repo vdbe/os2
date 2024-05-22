@@ -32,7 +32,6 @@ struct node {
 inline int lllist_init(struct lllist_head *list, int readers) {
 	pthread_mutexattr_t mutex_attr;
 
-
   if (pthread_mutexattr_init(&mutex_attr) != 0) {
     perror("pthread set stacksize");
     return LLLIST_FAILURE;
@@ -135,11 +134,13 @@ inline void lllist_add(struct lllist_head *head, struct lllist_node *new) {
   // Point `next` to the new node
   head->first = new;
 
+
 	if(pthread_mutex_trylock(head->mutex_new_node) != 0) {
 		if(*arrived == true) {
 #if LOG_LVL >= INFO
 		fprintf(stderr, "INFO(lllist_add): broadcast new node\n");
 #endif
+			SLEEP(10);
 			if(pthread_cond_broadcast(head->cond_new_node) != 0) {
 				// TODO: No idea how to handle this error
 				perror("lllist_add pthread cond broadast new node");
@@ -290,6 +291,7 @@ inline int lllist_node_consume(struct lllist_head *head, char **data,
             (void*)node);
 #endif
 
+		SLEEP(10);
 		if(pthread_cond_wait(head->cond_new_node, head->mutex_new_node) != 0) {
 			// TODO: No idea how to handle this error
 			perror("lllist_add pthread cond wait new node");

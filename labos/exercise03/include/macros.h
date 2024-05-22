@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sched.h>
+
 #define TRACE 6
 #define DEBUG 5
 #define INFO 4
@@ -8,7 +10,7 @@
 #define FATAL 1
 
 #ifndef LOG_LVL
-#define LOG_LVL INFO
+#define LOG_LVL WARN
 #endif
 
 // #if defined(__has_feature)
@@ -20,6 +22,15 @@
 #ifdef __SANITIZE_THREAD__
 #define TSAN_ENABLED
 #endif
+
+int msleep(long);
+
+#ifdef SLEEP_ENABLE
+#define SLEEP(msec) msleep(msec); sched_yield()
+#else
+#define SLEEP(msec)
+#endif
+
 
 #ifdef TSAN_ENABLED
 

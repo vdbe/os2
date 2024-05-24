@@ -13,6 +13,15 @@
 /*
  *
  * TODO: If possible replace empty node with with `NULL` ptr
+ * Currently we have 2 strcpy's per node + 1 per consumer
+ * this can be reduced to 1 (assuming node->data is read-only)
+ * pass ownership to the last consumer each consumer will also need
+ * to check if it's the last before going to the next node if it was not already the last node
+ * we can do this by passing the double data ptr back and substractin untill we reach
+ * readers and doing and extra atomic check.
+ *
+ * If a consumer is the last of a value it will clear by calling `lllist_consumer_free`
+ * with a double ptr to data allowing is to get the `node` allocation and freeing node + data
  *
  */
 
